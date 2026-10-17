@@ -1,0 +1,33 @@
+name: Sync ERP & send alerts
+
+on:
+  schedule:
+    # Times are UTC. 01:30,04:30,...,16:30 UTC = 07:00, 10:00, 13:00, 16:00, 19:00, 22:00 IST
+    - cron: "30 1,4,7,10,13,16 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: erp-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}

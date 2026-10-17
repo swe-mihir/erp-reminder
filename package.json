@@ -1,0 +1,37 @@
+{
+  "name": "erp-reminder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "sync": "tsx scripts/sync.ts",
+    "local": "tsx scripts/local.ts",
+    "erp:test": "tsx scripts/erp-test.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "mock-erp": "tsx tests/mock-erp.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.10",
+    "@electric-sql/pglite-socket": "^0.2.13",
+    "bcryptjs": "^3.0.3",
+    "next": "^15.5.28",
+    "nodemailer": "^10.1.2",
+    "postgres": "^3.4.9",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "playwright": "^1.64.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
