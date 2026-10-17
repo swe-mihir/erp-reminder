@@ -35,7 +35,8 @@ lib/erp/        ERP HTTP client + JSON parsers   ← adjust here if the ERP chan
 lib/sync.ts     sync + alert pipeline
 lib/alerts.ts   alert planning + email template
 db/schema.sql   database schema
-scripts/        migrate, sync (cron), erp-test (manual check)
+scripts/        migrate, sync (cron), erp-test (manual check), db-check
+deploy/         systemd unit + Caddyfile for self-hosting
 tests/          unit tests, mock ERP server, browser end-to-end test
 ```
 
@@ -112,6 +113,68 @@ The workflow in `.github/workflows/sync.yml` runs at 7:00, 10:00, 13:00, 16:00, 
 
 ### 7. Try it
 Open the site, sign up, click the confirmation link in your email, and connect your ERP account. Your deadlines appear right away, and an alert email arrives if anything is due within your chosen window.
+
+---
+
+## Self-host on your own server (instead of Vercel)
+
+Any always-on Linux machine works: a VPS (DigitalOcean, Hetzner, Oracle Cloud free tier, AWS Lightsail) or a spare PC or Raspberry Pi. Pick a region near India (Mumbai or Singapore) so the ERP and database are close. These steps are for Ubuntu; ready-made config files are in `deploy/`.
+
+### 1. Install and build
+```bash
+sudo apt update && sudo apt install -y git curl
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
+git clone https://github.com/<you>/erp-reminder.git && cd erp-reminder
+npm ci && npm run build
+```
+For a private repo, `git clone` needs a GitHub personal access token or a deploy key.
+
+### 2. Configure `.env`
+Create `.env` in the project folder with the same variables as the Vercel table above (`DATABASE_URL`, `ENCRYPTION_KEY`, `CRON_SECRET`, `APP_URL=https://your-domain.com`, the `SMTP_*` lines, `MAIL_FROM`, and optionally `ALLOWED_EMAIL_DOMAINS`). Then lock it down:
+```bash
+chmod 600 .env
+```
+⚠️ If you're moving an existing deployment, use the **same** `ENCRYPTION_KEY`, or saved ERP passwords can't be decrypted.
+
+**Database:** keep using Neon (nothing else to do), or run Postgres on the server: `sudo apt install -y postgresql`, create a database and user, set `DATABASE_URL=postgres://user:pass@127.0.0.1/erp_reminder`, then run `npm run db:migrate` to create the tables.
+
+### 3. Keep the site running (systemd)
+Edit `YOUR_USER` in `deploy/erp-reminder.service`, then:
+```bash
+sudo cp deploy/erp-reminder.service /etc/systemd/system/
+sudo systemctl enable --now erp-reminder
+```
+The site now runs on `127.0.0.1:3000` and restarts on crashes and reboots. Check it with `systemctl status erp-reminder` and `journalctl -u erp-reminder -f`.
+
+### 4. HTTPS (Caddy)
+Point your domain's DNS A record at the server. Edit the domain in `deploy/Caddyfile`, then:
+```bash
+sudo apt install -y caddy
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+```
+Caddy gets and renews the TLS certificate automatically, and the Caddyfile adds basic security headers.
+
+**Home server with no public IP?** Use a Cloudflare Tunnel (`cloudflared`) instead of Caddy. It gives you HTTPS without opening ports on your router.
+
+### 5. Scheduled sync (cron)
+Run `crontab -e` and add the line below. With the server clock on UTC, it runs at 7:00, 10:00, 13:00, 16:00, 19:00 and 22:00 IST:
+```
+30 1,4,7,10,13,16 * * * cd $HOME/erp-reminder && npm run sync >> sync.log 2>&1
+```
+Running the sync on your own server keeps `ENCRYPTION_KEY` off GitHub entirely.
+
+⚠️ **Run only one sync.** Once the server's cron is running, delete the `schedule:` block in `.github/workflows/sync.yml`, and remove the Vercel project if you've moved off it. Two syncs mean double ERP logins per student, which can log them out of the ERP.
+
+### 6. Updating
+```bash
+git pull && npm ci && npm run build && sudo systemctl restart erp-reminder
+```
+
+### Server security
+The server holds the key to every student's ERP password, so:
+- Use SSH keys only (`PasswordAuthentication no` in `/etc/ssh/sshd_config`).
+- Allow only SSH and web traffic: `sudo ufw allow 22,80,443/tcp && sudo ufw enable`.
+- Turn on automatic security updates: `sudo apt install -y unattended-upgrades`.
 
 ---
 

@@ -1,0 +1,14 @@
+# Caddy reverse proxy with automatic HTTPS (see "Self-host on your own server" in README.md).
+# Replace the domain, then:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+
+your-domain.com {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+	reverse_proxy 127.0.0.1:3000
+}

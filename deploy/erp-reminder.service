@@ -1,0 +1,24 @@
+# systemd unit for self-hosting (see "Self-host on your own server" in README.md).
+# Replace YOUR_USER, then:
+#   sudo cp deploy/erp-reminder.service /etc/systemd/system/
+#   sudo systemctl enable --now erp-reminder
+# Next.js reads .env from WorkingDirectory, so no EnvironmentFile is needed.
+
+[Unit]
+Description=ERP Reminder (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/erp-reminder
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -p 3000 -H 127.0.0.1
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
