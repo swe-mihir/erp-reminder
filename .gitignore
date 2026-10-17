@@ -7,3 +7,5 @@ next-env.d.ts
 .local
 _to_delete
 .claude
+.env.*
+!.env.example
